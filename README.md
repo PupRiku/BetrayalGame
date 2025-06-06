@@ -62,8 +62,8 @@ The project has achieved a complete, end-to-end gameplay loop for the entire "fi
 - [x] Player Character Setup
 - [x] Data Structure for Characters (Unique Stats/Tracks/Colors)
 - [x] Stat Initialization from Data Table
-- [x]Stat Modification Function (ChangeStat)
-- [x] Custom Dice Rolling Logic (RollDice function)
+- [x] Stat Modification Function (`ChangeStat`)
+- [x] Custom Dice Rolling Logic (`RollDice` function)
 - [x] Room Data Structures & Data Table
 - [x] Player Navigation (First-person, Centered, 90-degree smooth turns)
 - [x] Room Deck Management (Initialization, Shuffling, Unique Draws, Empty Deck Handling)
@@ -79,7 +79,7 @@ The project has achieved a complete, end-to-end gameplay loop for the entire "fi
 - [x] Haunt Roll Mechanic
 - [x] Haunt Chart Data Structure & Lookup Logic
 - [x] Traitor Selection Logic
-- [x] Haunt Information Distribution & UI (WBP_HauntBriefing)
+- [x] Haunt Information Distribution & UI (`WBP_HauntBriefing`)
 - [ ] Player Inventory System (for kept Items and Omens) (Next Up!)
 - [ ] Implement All Remaining Omen, Event, and Item Card Effects
 - [ ] Implementation of all 50+ Haunt Scenarios (Traitor/Hero actions, monster control, win condition checking)
