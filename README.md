@@ -6,115 +6,74 @@ This project is a digital adaptation of the popular board game "Betrayal at Hous
 
 ## Current Project Status (As of June 2025)
 
-The project has achieved a highly functional core gameplay loop for exploration and dynamic house layout generation. This includes a robust, data-driven system for managing and drawing unique room tiles from shuffled, floor-specific decks, and a complete player-controlled room placement mechanic with live validity feedback and rotation-aware connections. Furthermore, the foundational data structures and logic for Omen, Event, and Item card systems are in place, including deck initialization, card drawing, and placeholder triggers for card events upon room discovery. All official room data has been entered, providing a comprehensive set of tiles for gameplay.
+The project has achieved a complete gameplay loop for the "first act" of the game. This includes a robust, data-driven system for house exploration, dynamic room revealing with player-controlled rotation, and a fully functional card system (Omens, Events, Items) from data structure to UI display to effect execution. The foundational systems for player character stats, custom dice rolling, and the pivotal Haunt Roll mechanic are all in place and have been successfully integrated and tested.
 
 ## Features Implemented:
 
 ### 1. Player & Camera System
 
-- **First-Person Navigation:** Player character operates from a first-person perspective.
-- **Room-Centered:** The player is always positioned in the center of their current room tile.
-- **90-Degree Snap Turns:** Smooth, 90-degree turns using Left/Right Arrow keys, with the character's facing direction (North, East, South, West) tracked via an Enum.
-- **Camera Control:** The camera correctly follows the character's snap turns and maintains orientation.
+- **First-Person Navigation:** Player character operates from a first-person perspective, centered in the current room.
+- **90-Degree Snap Turns:** Smooth, 90-degree turns using Left/Right Arrow keys, with the character's facing direction tracked.
+- **Camera Control:** The camera correctly follows the character's snap turns.
 
-### 2. Room System & Data (`BP_RoomTile`)
+### 2. Player Stats & Character System
 
-- **Modular Room Tiles:**
-  - Each room tile can define whether it has doors on its local North, East, South, and West sides using boolean flags (`bHas[Direction]Door`).
-  - Stores a `RoomName` (Text/String).
-  - Stores an `IconType` (`ERoomIconType` Enum: None, Omen, Event, Item).
-  - Stores `bIconAlreadyTriggered` (Boolean) to ensure one-time icon events.
-  - Can hold references to adjacent, connected, revealed rooms (`ConnectedRoom_[Direction]`).
-- **Data-Driven Design:**
-  - `EFloorType` Enum (e.g., GroundFloor, UpperFloor, Basement, Any) defines floor types.
-  - `FRoomData` Struct defines individual room properties:
-    - `RoomName` (Text/String)
-    - `RoomTileClass` (`TSubclassOf BP_RoomTile`)
-    - `AllowedFloors` (Array of `EFloorType`)
-    - `bHasNorthDoor_Default`, `bHasEastDoor_Default`, `bHasSouthDoor_Default`, `bHasWestDoor_Default` (Booleans for default door configuration).
-    - `IconType` (`ERoomIconType` Enum).
-    - `bHasUniqueRule` (Boolean - flag for rooms with special rules).
-  - `DT_RoomTiles` Data Table: Stores definitions for all official room tiles, fully populated.
+- **Data-Driven Characters (`DT_Characters`):**
+  - A Data Table stores definitions for each unique character.
+  - The `FCharacterData` struct holds each character's `CharacterName`, `CharacterPortrait`, `CharacterColor`, starting stat indices, and their **unique stat tracks** (arrays of integers for Might, Speed, Sanity, and Knowledge).
+- **Stat Initialization (`BP_ThirdPersonCharacter`):**
+  - At game start, the character loads its data from `DT_Characters` to set its starting stat indices and values correctly.
+- **Stat Modification:** A `ChangeStat` function cleanly handles stat changes by modifying the character's index on their personal track and updating the corresponding stat value.
 
-### 3. Room Deck Management (`BP_BetrayalGameMode`)
+### 3. Room System & Deck Management
 
-- **Initialized Floor Decks:** At game start, separate, shuffled decks of available room tile FNames are created for each floor (Ground, Upper, Basement) from `DT_RoomTiles`.
-- **Starting Room Exclusion:** Pre-defined starting rooms are correctly excluded from these draw decks.
-- **Unique Room Drawing (`DrawRandomRoomForFloor` function):**
-  - Draws uniquely from the top of the appropriate floor's deck.
-  - Drawn rooms are removed from the primary deck.
-  - Globally unique rooms (if allowed on multiple floors) are correctly removed from _all_ other decks once drawn from one.
+- **Data-Driven Rooms (`DT_RoomTiles`):** A fully populated Data Table defines all official rooms with their names, floor allowances, default door configurations, and card-drawing `IconType`.
+- **Robust Deck Management (`BP_BetrayalGameMode`):**
+  - At game start, separate, shuffled decks of available room tiles are created for each floor.
+  - Pre-placed starting rooms (Foyer, etc.) are correctly excluded from the draw decks.
+  - The system draws unique rooms from the appropriate deck, removing them after use.
+  - Globally unique tiles (if allowed on multiple floors) are correctly removed from _all_ decks once drawn from one.
   - The system correctly handles and reports when a floor-specific deck is empty.
+- **Player-Controlled Room Placement:**
+  - A full placement preview mode with live UI feedback ("VALID" / "INVALID") based on door alignment.
+  - Player can rotate the preview tile with A/D keys.
+  - Confirmation logic correctly validates placement, spawns the permanent room with the chosen rotation, establishes two-way logical connections based on the rotated orientation, and moves the player.
 
-### 4. Exploration & Player-Controlled Room Placement
+### 4. Dice & Card Systems
 
-- **Player State Tracking:** `BP_ThirdPersonCharacter` tracks `CurrentRoom`, `CurrentFloor`, and `CurrentFacingDirection`.
-- **Wall Interaction Analysis (`GetFacedWallInteractionInfo` function):**
-  - Fully rotation-aware: Correctly determines which _local side_ of a world-rotated `CurrentRoom` the player is facing.
-  - Identifies the faced wall as `SolidWall`, `DoorToRevealedRoom`, or `DoorToUnrevealedArea`.
-- **Movement Between Revealed Rooms:** Pressing "E" on a `DoorToRevealedRoom` successfully moves the player between connected rooms.
-- **Room Reveal Sequence (for `DoorToUnrevealedArea`):**
-  1.  **Enter Placement Mode:** `bIsInRoomPlacementMode` state activated. `PendingRoomData` (for the drawn room) and `ExitDirectionFromOldRoom` are stored.
-  2.  **Preview Actor:** A temporary `PreviewRoomActorRef` is spawned at the correct adjacent location and configured.
-  3.  **Player-Controlled Rotation:** A/D keys rotate the `PreviewRoomActorRef`.
-  4.  **Live Validity Feedback:** UI prompt dynamically updates to "VALID" or "INVALID - No matching door!" based on whether a default door on the rotated preview aligns with the exit. (Visual feedback on preview actor material also implemented).
-  5.  **Confirm Placement (Second "E" press):**
-      - **Validity Check:** Re-confirms if the aligned local door of the preview room has a corresponding default door in `PendingRoomData`.
-      - **Invalid Placement:** Message shown, player remains in placement mode.
-      - **Valid Placement:** Permanent room is spawned with the preview's final transform (location and rotation). Preview is destroyed. Rooms are logically connected (two-way, using the correctly rotated side of the new room). Player is moved into the new permanent room.
+- **Dice Rolling:** A `RollDice` function in the Game Mode accurately simulates rolling any number of custom six-sided Betrayal dice (faces: 0, 0, 1, 1, 2, 2).
+- **Card Data Structures:** Separate Structs (`FCard_Omen`, `FCard_Event`, `FCard_Item`) and Data Tables (`DT_...Cards`) define all card types with their text and properties (`bIsWeapon`, `bIsCompanion`, etc.).
+- **Card Deck Management:** Omen, Event, and Item decks are initialized, shuffled, and drawn from correctly, handling discard piles and empty-deck rules (Omen reshuffle).
+- **Component-Based Card Effects (Scalable Architecture):**
+  - A base `BP_CardEffect_Base` actor component defines an `ExecuteEffect` function.
+  - Each card in the Data Tables is linked to a specific child component (e.g., `BP_CardEffect_Rotten`) that contains its unique logic.
+  - This decouples the player character from knowing specific card effects, making the system clean and easy to expand.
+- **Full Card Draw & Effect Loop:**
+  1.  Player enters a room with an icon (that hasn't been triggered before).
+  2.  The `ProcessRoomEntryEffects` function calls the appropriate `Draw[CardType]Card` function from the Game Mode.
+  3.  A `WBP_CardDisplay` UI widget is created and populated with the drawn card's data.
+  4.  An **Event Dispatcher** (`OnCardDismissed`) allows the game to wait for player input.
+  5.  When the player dismisses the card UI, a `Handle[CardType]Dismissed` event fires.
+  6.  This event gets the card's `EffectComponentClass` from its data, adds it to the player character, and calls `ExecuteEffect`.
+  7.  The effect component then runs its logic (e.g., making a stat roll with the `RollDice` function and applying results with the `ChangeStat` function).
 
-### 5. Card System - Initial Foundation
+### 5. Haunt Mechanic - Prerequisites
 
-- **Card Data Structures:**
-  - `FCard_Omen` Struct (includes `CardName`, `FlavorText`, `RuleText`, `bPlayerKeepsCard`, `bIsWeapon`, `bIsCompanion`) and `DT_OmenCards` Data Table.
-  - `FCard_Event` Struct and `DT_EventCards` Data Table.
-  - `FCard_Item` Struct (includes `bIsWeapon`) and `DT_ItemCards` Data Table.
-  - Sample cards populated in each Data Table.
-- **Card Deck Initialization (`BP_BetrayalGameMode`):**
-  - Separate deck and discard pile array variables (Array of FName) for Omen, Event, and Item cards.
-  - `InitializeCardDecks` function populates and shuffles these decks from their respective Data Tables at game start.
-- **Card Drawing Functions (`BP_BetrayalGameMode`):**
-  - `DrawOmenCard()`, `DrawEventCard()`, `DrawItemCard()` functions implemented.
-  - These handle drawing from the correct deck, moving to discard, removing from the main deck, and managing empty deck scenarios (Omen deck reshuffles its discard; Event/Item decks report failure if empty).
-- **Card Draw Triggering (`BP_ThirdPersonCharacter`):**
-  - `ProcessRoomEntryEffects` function is called when a player enters a room.
-  - Checks the `CurrentRoom`'s `IconType` (Omen, Event, Item, None) and `bIconAlreadyTriggered` status.
-  - If an icon is present and not yet triggered, it calls the appropriate `Draw[CardType]Card` function from the Game Mode.
-  - `bIconAlreadyTriggered` is set to true on the room instance to prevent re-triggering.
-  - Placeholder `Print String` messages currently display the drawn card's details.
-  - A "TODO: Make Haunt Roll!" placeholder is triggered after an Omen card is drawn.
+- **Omen Tracking:** The Game Mode now tracks `OmenCardCount`, which is correctly incremented after an Omen card's effect is resolved.
+- **Haunt Roll:** After an Omen's effect is complete, a `CheckForHauntStart` function is called. It rolls 6 dice and compares the result to `OmenCardCount`.
+- **Haunt Trigger (Placeholder):** A "THE HAUNT BEGINS!!!" message is printed if the Haunt Roll is failed, marking the successful implementation of the trigger mechanism.
 
 ### 6. User Interface (UI)
 
-- **Dynamic Interaction Prompts (`WBP_InteractionPrompt`):**
-  - Displays context-sensitive prompts for movement, room reveal, and room placement (including rotation and validity status).
-
-## Controls
-
-- **Left/Right Arrow Keys:** Turn player character 90 degrees left/right.
-- **A/D Keys:** While in room placement mode, rotate the preview room tile.
-- **E Key:**
-  - Interact with faced door (enter revealed room or initiate room placement for unrevealed door).
-  - Confirm placement of a rotated preview room.
-
-## Engine Version
-
-- Unreal Engine 5.5.4
-
-## How To Test (Current State)
-
-- Ensure custom Game Mode (`BP_BetrayalGameMode`) is set with `BP_ThirdPersonCharacter` as `Default Pawn Class`.
-- Level requires a `Player Start` and initial `BP_RoomTile` instances (e.g., Foyer) configured in `StartingRoomExclusionList`.
-- `DT_RoomTiles`, `DT_OmenCards`, `DT_EventCards`, `DT_ItemCards` should be populated.
-- Player character's `RoomSideLength` and initial `CurrentFloor` should be set.
+- **`WBP_PlayerHUD`:** Displays the character's current stats (Might, Speed, Sanity, Knowledge) and the name of the room they are in. Updates automatically when stats or location change.
+- **`WBP_CardDisplay`:** A modal UI for displaying drawn cards.
+- **`WBP_InteractionPrompt`:** Dynamically displays all context-sensitive prompts.
 
 ## Next Steps / Future Goals
 
-- **Implement Player Stats & Dice Rolling Mechanics** (Next Up!).
-- **Develop UI for Displaying Drawn Cards.**
-- **Implement Specific Card Effects.**
-- **The Haunt Mechanic** (Haunt Roll, Traitor Selection, Hidden Information).
-- Implement Unique Room Rules (using `bHasUniqueRule` flag).
+- **The Haunt!** Implement the Haunt Chart lookup, Traitor selection process, and display of secret goals for Traitor and Heroes. (Next Up!)
+- **Implement more Card Effects** using the established component-based system.
+- **Implement Unique Room Rules** (using `bHasUniqueRule` flag).
 - Prevent Room Overlaps during placement (spatial grid check).
 - Top-Down Map Display for player reference.
 - Multiplayer Functionality.
