@@ -6,7 +6,7 @@ This project is a digital adaptation of the popular board game "Betrayal at Hous
 
 ## Current Project Status (As of June 2025)
 
-The project features a complete, end-to-end gameplay loop for the "first act" and the pivot into the Haunt. All foundational systems are in place, including a data-driven framework for characters, rooms, and all card types. The Omen card deck has been fully implemented, with each card's unique mechanics (stat changes, companions, passive bonuses, combat events, and player-activated abilities) handled by a robust, scalable component-based architecture. The initial Haunt reveal and Traitor selection are fully functional.
+The project features a complete gameplay loop for the "first act" of the game and a fully functional transition into the "second act." All foundational systems are in place, including a data-driven framework for characters, rooms, and all card types. **All Omen cards have been implemented**, featuring a robust, scalable system for immediate effects, passive bonuses, and player-activated abilities. A foundational combat system has been built to handle attacks, defense, and damage, laying the groundwork for the Haunt phase of the game.
 
 ## Features Implemented:
 
@@ -14,53 +14,57 @@ The project features a complete, end-to-end gameplay loop for the "first act" an
 
 - **Data-Driven Characters (`DT_Characters`):** A Data Table stores definitions for each unique character, including their **unique stat tracks** and color.
 - **Stat Management:** The player character correctly loads its stats and has a `ChangeStat` function to handle modifications from game events, which are reflected on the Player HUD.
-- **Player Inventory:** The character now has a functional inventory system. Kept Omen and Item cards are correctly added to the inventory and displayed on the HUD.
+- **Player Inventory:** The character has a functional inventory system. Kept Omen and Item cards are correctly added to the inventory and displayed on the HUD.
 
 ### 2. Dice, Combat, & Damage
 
 - **Custom Dice Rolling:** A `RollDice` function accurately simulates rolling any number of custom Betrayal dice.
-- **Foundational Combat System:** A `ResolveAttack` function in the Game Mode handles comparing an attacker's roll to a defender's roll.
-- **Damage System:** A `TakeDamage` function on the character correctly applies Physical or Mental damage to the appropriate stats. It has been refactored to support player choices (e.g., for the Skull Omen).
+- **Flexible Combat Functions:**
+  - A generic **`ResolveAttack`** function in the Game Mode handles the core "dice-off" between an attacker and a defender, capable of using different stats for attack and defense.
+  - A **`TakeDamage`** function on the character correctly applies `Physical` or `Mental` damage to the corresponding stats (Might or Sanity).
+- **Player-Initiated Combat:**
+  - An `IA_Attack` input action allows the player to initiate an attack.
+  - The `MakeAttackRoll` function on the character serves as the "brain" for an attack, checking the character's inventory for passive bonuses (e.g., the **Spear** adding +2 dice to Might attacks) before calling `ResolveAttack`.
+- **Interactive Choices:** The system now supports player choices during combat events. When attacking with the **Ring**, a UI widget (`WBP_AttackChoice`) appears, allowing the player to choose between a Might or Sanity attack. A similar UI (`WBP_DamageChoice`) is used for defensive choices like the **Skull**.
 
 ### 3. Exploration & Room System
 
-- **Data-Driven Rooms (`DT_RoomTiles`):** A fully populated Data Table defines all official rooms with their properties.
-- **Robust Room Deck Management:** At game start, separate, shuffled decks of rooms are created for each floor, excluding starting tiles. The system draws uniquely from the decks and correctly handles removing globally unique tiles from all decks once drawn.
+- **Data-Driven Rooms (`DT_RoomTiles`):** A fully populated Data Table defines all official rooms.
+- **Robust Room Deck Management:** At game start, separate, shuffled decks of rooms are created for each floor, excluding starting tiles. The system draws unique rooms and correctly handles removing globally unique tiles from all decks once drawn.
 - **Player-Controlled Room Placement:** A full placement preview mode with live UI and visual feedback on placement validity. The player can rotate the preview, and the confirmation logic correctly validates and connects the rotated room.
 
 ### 4. Card & Event System
 
 - **Complete Data Foundation:** Data Tables for Omens, Events, and Items are set up and populated.
-- **Card Deck Management:** All three card decks are initialized, shuffled, and drawn from correctly, managing discard piles and empty-deck rules.
-- **Component-Based Card Effects:** A clean, scalable system where each card's unique logic is contained in its own Actor Component (`BP_CardEffect_Base` children), linked from the Data Tables.
-- **Full Card Draw & Effect Loop:** The system correctly handles drawing a card, displaying its UI, waiting for player dismissal via an Event Dispatcher, and then executing the card's specific component-based effect.
-- **Omen Cards Fully Implemented:** The logic for all Omen cards, covering a wide variety of effect types (immediate stat changes, companions, passive weapon/gear bonuses, combat events, player-activated abilities), is now complete.
+- **Card Deck Management:** All three card decks are initialized, shuffled, and drawn from correctly.
+- **Component-Based Card Effects:** A clean, scalable system where each card's unique logic is contained in its own Actor Component (`BP_CardEffect_Base` children).
+- **Full Card Draw & Effect Loop:** The system correctly handles drawing a card, displaying its UI, waiting for player dismissal via an Event Dispatcher, and then executing the card's specific effect.
+- **All Omen Cards Implemented:** The logic for all 13 Omen cards is complete, covering a wide variety of effect types: immediate stat changes (Book, Holy Symbol), companions (Girl, Madman, Dog), passive weapons (Spear), passive gear (Ring), combat events (Bite), and player-activated abilities (Crystal Ball, Mask, Spirit Board).
 
 ### 5. The Haunt
 
-- **Complete Haunt Reveal Sequence:** The game correctly tracks the Omen count, triggers and performs a Haunt Roll, looks up the specific Haunt in the `DT_HauntChart` based on the triggering Omen and Room, retrieves the full `FHauntData`, determines the Traitor based on the Haunt's `TraitorSelectionRule`, and displays the secret objectives to the Traitor and Heroes using the `WBP_HauntBriefing` UI.
+- **Complete Haunt Reveal Sequence:** The game correctly tracks the `OmenCardCount`, triggers a Haunt Roll, looks up the specific Haunt in the `DT_HauntChart` based on the Omen/Room combo, retrieves the full `FHauntData`, determines the Traitor, and displays the secret objectives to the Traitor and Heroes.
 
 ### 6. User Interface (UI)
 
 - **`WBP_PlayerHUD`:** Displays character stats, current room name, and a dynamic inventory list.
-- **`WBP_CardDisplay` & `WBP_HauntBriefing`:** Fully functional, data-driven UI for displaying cards and secret Haunt rules.
-- **`WBP_DamageChoice`:** A UI for handling player choices during game events (e.g., the Skull Omen).
+- **`WBP_CardDisplay` & `WBP_HauntBriefing`:** UI for displaying cards and secret Haunt rules.
+- **`WBP_DamageChoice` & `WBP_AttackChoice`:** UI for handling player choices during game events.
 
 ## Up-to-Date Checklist
 
 - `[x]` Project Setup & Version Control
-- `[x]` Player Stats & Character System (Data & Initialization)
-- `[x]` Custom Dice Rolling Logic
-- `[x]` Room Data Structures & Deck Management
+- `[x]` Player Stats & Character System (Data, Init, Modification)
+- `[x]` Custom Dice Rolling Logic & Foundational Combat System
+- `[x]` Room Data & Deck Management Systems
 - `[x]` Player-Controlled Room Placement & Connection Logic
-- `[x]` Card Data Structures & Deck Management
+- `[x]` Card Data & Deck Management Systems
 - `[x]` Component-Based Card Effect Architecture
 - `[x]` **All Omen Card Effects Implemented**
-- `[x]` Player Inventory System (Adding Items/Omens)
+- `[x]` Player Inventory System
 - `[x]` Haunt Reveal & Traitor Selection Logic
-- `[x]` UI for HUD, Cards, and Haunt Briefing
+- `[x]` UI for HUD, Cards, and Briefings
 - `[ ]` **Haunt Turn Structure (Heroes' Turn, Traitor's Turn)** (Next Up!)
-- `[ ]` **Full Combat System** (Attacking other players/monsters)
 - `[ ]` Implement All Event & Item Card Effects
 - `[ ]` Implement Player-Activated Abilities (e.g., Crystal Ball, Mask, Spirit Board)
 - `[ ]` Turn Management System (Tracking turn phases)
